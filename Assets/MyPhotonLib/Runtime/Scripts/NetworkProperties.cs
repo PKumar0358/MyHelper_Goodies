@@ -15,6 +15,8 @@ namespace PRK_PhotonLib
         private void Start()
         {
             Dictionary<string,object>o = new Dictionary<string,object>();
+            object[] ht=new object[0];
+            Debug.Log(ObjectToByteArrayConverter.ObjectToByteArray(ht).Length);
         }
     }
     public partial class NetworkProperties_F 
