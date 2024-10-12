@@ -69,11 +69,25 @@ namespace PRK_PhotonLib
                 Instance.Init();
             Instance.lobbyManager.Add_LobbyJoinListener((a, b) =>
             {
-                Debug.Log($"{a},{b}");
-                Instance.roomManager.Create("simple", (a, success) =>
+               if(Application.platform==RuntimePlatform.WindowsEditor)
                 {
-                    Debug.Log("room created");
-                });
+                    Debug.Log($"{a},{b}");
+                    Instance.roomManager.Create("simple", (a, success) =>
+                    {
+                        Debug.Log("room created");
+                    });
+                }
+               else if(Application.platform==RuntimePlatform.WindowsPlayer)
+                {
+                    Debug.Log($"{a},{b}");
+                    Instance.roomManager.JoinRoom("simple", (a, success) =>
+                    {
+                        Debug.Log("room joined");
+
+                        PhotonNetwork.Instantiate("Cube",Vector3.zero, Quaternion.identity);
+                    });
+                }
+
             });
             PhotonNetwork.ConnectUsingSettings();
         }

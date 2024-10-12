@@ -11,15 +11,22 @@ namespace PRK_PhotonLib
     public class PRoomManager : IInRoomCallbacks,IMatchmakingCallbacks,IDisposable
     {
         private Queue<Action<object,bool>> OnRoomCreatedTempListeners;
+        private Queue<Action<object,bool>> OnRoomJoinTempListeners;
 
         public void Create(string name_,Action<object, bool> createListener_)
         {
             OnRoomCreatedTempListeners.Enqueue(createListener_);
             PhotonNetwork.CreateRoom(name_);
         }
+        public void JoinRoom(string name_, Action<object, bool> createListener_)
+        {
+            OnRoomJoinTempListeners.Enqueue(createListener_);
+            PhotonNetwork.JoinRoom(name_);
+        }
         public PRoomManager()
         {
             OnRoomCreatedTempListeners=new Queue<Action<object,bool>>();
+            OnRoomJoinTempListeners = new Queue<Action<object,bool>>();
             PhotonNetwork.AddCallbackTarget(this);
         }
         public void Dispose()
@@ -44,6 +51,13 @@ namespace PRK_PhotonLib
         public void OnJoinedRoom()
         {
             Debug.Log("OnRoomJoined");
+            if (OnRoomJoinTempListeners.Count > 0)
+            {
+                while (OnRoomJoinTempListeners.Count > 0)
+                {
+                    OnRoomJoinTempListeners.Dequeue().Invoke("joined", true);
+                }
+            }
         }
 
         public void OnJoinRandomFailed(short returnCode, string message)
