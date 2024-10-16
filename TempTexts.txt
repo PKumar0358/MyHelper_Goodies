@@ -1,0 +1,96 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using Unity.Collections;
+using Unity.Jobs;
+using Unity.Burst;
+using Unity.Mathematics;
+using System;
+public class CullingJob : MonoBehaviour
+{
+    [SerializeField] Renderer[] meshes;
+    void Update()
+    {
+        int cnt=meshes.Length;
+        float3 p = transform.position;
+        NativeArray<float3>a = new NativeArray<float3>(cnt,Allocator.TempJob);
+        NativeArray<float3>b = new NativeArray<float3>(cnt,Allocator.TempJob);
+        NativeArray<bool>results=new NativeArray<bool>(cnt,Allocator.TempJob);
+        NativeArray<bool>results2=new NativeArray<bool>(cnt,Allocator.TempJob);
+        for (int i = 0; i <cnt; i++)
+        {
+            a[i] = meshes[i].bounds.max;
+            b[i] = meshes[i].bounds.min;
+            results[i] = false;
+        }
+       var job=new BoxLineTest()
+       {
+           count=cnt,
+           camPos=p,
+           maxArray=a,
+           minArray=b,
+           testResults=results,
+           testResults2=results2,
+       }.Schedule();
+        job.Complete();
+
+        for (int i = 0; i < cnt; i++)
+        {
+           // meshes[i].enabled = results[i];
+            Debug.DrawLine(p, b[i],results[i]?Color.red:Color.green);
+            Debug.DrawLine(p, a[i],results2[i]?Color.red:Color.green);
+        }
+        a.Dispose();
+        b.Dispose();
+        results.Dispose();
+        results2.Dispose();
+    }
+}
+
+
+
+[BurstCompile]
+public partial struct BoxLineTest:IJob
+{
+    [ReadOnly] public int count;
+    [ReadOnly] public float3 camPos;
+    [ReadOnly] public NativeArray<float3> maxArray;
+    [ReadOnly]public NativeArray<float3> minArray;
+    public NativeArray<bool> testResults;
+    public NativeArray<bool> testResults2;
+    public void Execute()
+    {
+      for(int k=0;k<200;k++)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                for (int j = 0; j < count; j++)
+                {
+                    if (i != j)
+                    {
+                        bool b1 = IsCrossing(camPos, minArray[i], minArray[j], maxArray[j]);
+                        bool b2 = IsCrossing(camPos, maxArray[i], minArray[j], maxArray[j]);
+                        testResults[i] = b1;
+                        testResults2[i] = b2;
+                        if (b1 || b2)
+                            break;
+                    }
+                }
+            }
+        }
+    }
+    private bool IsCrossing(float3 start_,float3 end_,float3 min_,float3 max_)
+    {
+        float3 dir=end_ - start_;
+        float3 invdir = 1f / dir;
+        float3 tMin = (min_ - start_) * invdir;
+        float3 tMax = (max_ - start_) * invdir;
+        float3 t1 = math.min(tMin, tMax);
+        float3 t2 = math.max(tMin, tMax);
+        float tNear = math.max(math.max(t1.x, t1.y), t1.z);
+        float tFar = math.min(math.min(t2.x, t2.y), t2.z);
+        if (tNear > tFar || tFar < 0.0f)        
+            return false;
+        return true;
+    }
+}
